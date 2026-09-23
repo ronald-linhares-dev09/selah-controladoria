@@ -27,13 +27,6 @@ export const Sidebar = ({ collapsed = false} : SidebarProps) => {
     const { pathname } = useLocation()
 
 
-    const handleClick = (e: React.MouseEvent, pilar : number) => {
-            if (!pilares.includes(pilar) || !empresa) {
-                e.preventDefault()
-                return
-            }
-    }
-
     useEffect(() => {
         if (!empresa) return;
 
