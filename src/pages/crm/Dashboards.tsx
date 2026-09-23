@@ -42,16 +42,6 @@ const coresMeses : Record<string, string> = {
     "Dez": "#a855f7",  // púrpura
 }
 
-const coresAleatorias = (): string => {
-    const hexadecimal = "0123456789ABCDEF"
-    let cor ="#"
-
-    for (let i = 0; i < 6; i++) {
-        cor += hexadecimal[Math.floor(Math.random() * 16 )]
-    }
-    return cor
-}
-
 
 const Dashboards = () => {
 
