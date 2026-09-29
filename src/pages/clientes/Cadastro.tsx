@@ -121,7 +121,7 @@ const Cadastro = () => {
                         <div className="flex flex-col gap-1">
                             <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="empresa">Nome da Empresa</label>
                             <input type="text" placeholder="Empresa Ltda" id="empresa" className="bg-gray-100/70 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                             placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" onChange={(e) => setEmpresa(e.target.value)}></input>
+                             placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" value={nome} onChange={(e) => setEmpresa(e.target.value)}></input>
                         </div>
                     
 
@@ -141,37 +141,37 @@ const Cadastro = () => {
                         <div className="flex flex-col gap-1">
                             <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">CEP</label>
                             <input type="text" placeholder="87200-242" id="cep" className="bg-gray-100/70 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                             placeholder-gray-600/3 focus:outline-none focus:border-emerald-400" onChange={(e) => setCEP(e.target.value)}></input>
+                             placeholder-gray-600/3 focus:outline-none focus:border-emerald-400" value={cep} onChange={(e) => setCEP(e.target.value)}></input>
                         </div>
 
                         <div className="flex flex-col gap-1">
                             <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Estado</label>
                             <input type="text" placeholder="Paraná" id="estado" className="bg-gray-100/70 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                             placeholder-gray-600/3 focus:outline-none focus:border-emerald-400" onChange={(e) => setEstado(e.target.value)}></input>
+                             placeholder-gray-600/3 focus:outline-none focus:border-emerald-400" value={estado} onChange={(e) => setEstado(e.target.value)}></input>
                         </div>
 
                         <div className="flex flex-col gap-1">
                             <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Cidade</label>
                             <input type="text" placeholder="Cianorte" id="cidade" className="bg-gray-100/70 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                             placeholder-gray-600/3 focus:outline-none focus:border-emerald-400" onChange={(e) => setCidade(e.target.value)}></input>
+                             placeholder-gray-600/3 focus:outline-none focus:border-emerald-400" value={cidade} onChange={(e) => setCidade(e.target.value)}></input>
                         </div>
 
                         <div className="flex flex-col gap-1">
                             <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Rua</label>
                             <input type="text" placeholder="Rua Álvares " id="rua" className="bg-gray-100/70 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                             placeholder-gray-600/3 focus:outline-none focus:border-emerald-400" onChange={(e) => setRua(e.target.value)}></input>
+                             placeholder-gray-600/3 focus:outline-none focus:border-emerald-400" value={rua} onChange={(e) => setRua(e.target.value)}></input>
                         </div>
 
                         <div className="flex flex-col gap-1">
                             <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Número</label>
                             <input type="text" placeholder="750" id="numero" className="bg-gray-100/70 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                             placeholder-gray-600/3 focus:outline-none focus:border-emerald-400" onChange={(e) => setNumero(e.target.value)}></input>
+                             placeholder-gray-600/3 focus:outline-none focus:border-emerald-400" value={numero} onChange={(e) => setNumero(e.target.value)}></input>
                         </div>
 
                         <div className="flex flex-col gap-1">
                             <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Complemento</label>
                             <input type="text" placeholder="Apartamento 30" id="complemento" className="bg-gray-100/70 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                             placeholder-gray-600/3 focus:outline-none focus:border-emerald-400" onChange={(e) => setComplemento(e.target.value)}></input>
+                             placeholder-gray-600/3 focus:outline-none focus:border-emerald-400" value={complemento} onChange={(e) => setComplemento(e.target.value)}></input>
                         </div>
                     </div>
                     {sucess && (
