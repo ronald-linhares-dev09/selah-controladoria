@@ -101,6 +101,10 @@ const Diagnostico = () => {
 
     const indicadores_ims = Object.values(indicador).sort((a, b) => a - b)
 
+    const ims_maduro = Object.entries(indicador).filter((p) => p[1] === indicadores_ims[6])[0][0]
+    console.log(Object.entries(indicador))
+    const ims_fragil = Object.entries(indicador).filter((p) => p[1] === indicadores_ims[0])[0][0]
+
     const indicadores_ics_conexoes = conexoes.flatMap((pilar) => pilar.conexao.map((conexao) => {
         const diff = indicador[pilar.pilar] - indicador[conexao]
         return [pilar.pilar + " → " + conexao, diff < 0 ? diff * -1 : diff]
@@ -111,7 +115,13 @@ const Diagnostico = () => {
         return diff < 0 ? diff * -1 : diff
     })).sort((a, b) => a - b)
 
-   
+    const ics_geral = (indicadores_ics.reduce((acc, conexao) => {
+      return acc + conexao
+    },0) / indicadores_ics.length)
+
+    const ics_saudavel = indicadores_ics_conexoes.find((p) => p[1] === indicadores_ics[0])?.[0]
+    const ics_fragil = indicadores_ics_conexoes.find((p) => p[1] === indicadores_ics[13])?.[0]
+
     const classificarIMS = (ims : number) => {
        if ( ims >= 21 && ims <= 40) {
         return "Fragilizado"
@@ -128,8 +138,6 @@ const Diagnostico = () => {
         return "Crítico"
        }                   
     }
-
-
 
     const classificarICS = (pilar : number, conexao : number) => {
         let diferença = (pilar - conexao) < 0 ? (pilar - conexao) * -1 : (pilar - conexao)
@@ -152,7 +160,61 @@ const Diagnostico = () => {
         return date.toLocaleDateString('pt-BR')
     }
 
+    const sintese = {
+        empresa : empresa,
+        ims : [
+         {
+            ims_geral : ims_geral.toFixed(0),
+            classificacao : classificarIMS(ims_geral)
+         },
+         { 
+            pilar_maduro : ims_maduro ,
+            valor_ims : indicadores_ims[6]
+         },
+         {
+            pilar_fragil : ims_fragil,
+            valor_ims : indicadores_ims[0]
+         }
+        ],
+        ics : [
+            {
+               ics_geral : ics_geral,
+               classificacao : classificarIMS(ics_geral)
+            },
+            { 
+               conexao : indicadores_ics[0],
+               ics_conexao_saudavel : ics_saudavel
+            },
+            {
+               conexao : indicadores_ics[13],
+               ics_conexao_fragil : ics_fragil
+            }
+        ]
+    }
+
     const gerar_PDF = async() => {
+        try {
+            const response = await fetch(`${API_URL}/gerar_pdf`, {
+                method:'POST',
+                headers: {
+                    'Authorization' : `Bearer ${token}`,
+                    'Content-Type' : 'application/json'
+                },
+                body: JSON.stringify(sintese)
+            })
+
+            if (!response.ok) {
+                const data = await response.json()
+                throw new Error(data.detail)
+            } else {
+                toast.success('PDF Gerado')
+
+            }
+        } catch (erro) {
+            toast.error(erro instanceof Error ? erro.message : "Erro ao gerar PDF")
+            console.log(erro)
+        }
+
 
         if (!referencia.current) return;
 
@@ -259,7 +321,7 @@ const Diagnostico = () => {
                     <div className={`flex flex-col gap-2 px-4 py-4 items-start justify-between border-t-4 border-t-sky-700 border-2  border-gray-300 rounded-lg bg-slate-50`}>
                         <p className="font-sans text-gray-700 font-light text-sm uppercase">Pilar mais maduro</p>
                         <p className={` text-sky-700 font-sans text-xs`}><strong className="text-[38px]/8">
-                            {Object.entries(indicador).filter((p) => p[1] === indicadores_ims[6])[0][0]}</strong>
+                            {ims_maduro}</strong>
                         </p>
                         <p className={`text-sky-700 font-sans text-lg font-semibold`}>
                             {indicadores_ims[6]}% · {classificarIMS(indicadores_ims[6])}
@@ -269,7 +331,7 @@ const Diagnostico = () => {
                     <div className={`flex flex-col gap-2 px-4 py-4 items-start justify-between border-t-4 border-t-red-700  border-2 border-gray-300 rounded-lg bg-slate-50`}>
                         <p className="font-sans text-gray-700 font-light text-sm uppercase">Pilar mais fragilizado</p>
                         <p className={` text-red-700 font-sans text-xs`}><strong className="text-[38px]/8">
-                            {Object.entries(indicador).filter((p) => p[1] === indicadores_ims[0])[0][0]}</strong>
+                            {ims_fragil}</strong>
                         </p>
                         <p className={`font-sans text-lg font-semibold text-red-700`}>
                             {indicadores_ims[0]}% · {classificarIMS(indicadores_ims[0])}
@@ -296,12 +358,10 @@ const Diagnostico = () => {
                     <div className={`flex flex-col gap-2 px-4 py-4 items-start justify-between border-t-4 border-2 border-gray-300 rounded-lg bg-slate-50`}>
                         <p className="font-sans text-gray-700 font-light text-sm uppercase">ICS Geral</p>
                         <p className={` font-sans text-xs`}><strong className="text-[38px]/8">
-                            {(indicadores_ics.reduce((acc, conexao) => {
-                                return acc + conexao
-                            },0) / indicadores_ics.length).toFixed(0)}</strong>%
+                            {ics_geral}</strong>%
                         </p>
                         <p className={`font-sans text-lg font-semibold`}>
-                            {classificarICS(Math.round(indicadores_ics.reduce((acc, conexao) => { return acc + conexao},0)), 0)}
+                            {classificarICS(Math.round(ics_geral), 0)}
                         </p>
                     </div>
 
@@ -311,7 +371,7 @@ const Diagnostico = () => {
                             {indicadores_ics[0]} pts</strong>
                         </p>
                         <p className={`text-sky-700 font-sans text-lg font-semibold`}>
-                           {indicadores_ics_conexoes.find((p) => p[1] === indicadores_ics[0])?.[0]}
+                           {ics_saudavel}
                         </p>
                     </div>
 
@@ -321,7 +381,7 @@ const Diagnostico = () => {
                             {indicadores_ics[13]}</strong>
                         </p>
                         <p className={`font-sans text-lg font-semibold text-red-700`}>
-                            {indicadores_ics_conexoes.find((p) => p[1] === indicadores_ics[13])?.[0]}
+                            {ics_fragil}
                         </p>
                     </div>
                 </div>

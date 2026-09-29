@@ -20,7 +20,7 @@ interface Cliente {
 }
 
 interface Contrato {
-    cpf_cliente : string
+    cliente_id : string
     valor_mensal : string
     tempo_contrato : string
     forma_pagamento : string
@@ -93,7 +93,7 @@ const Contratos = () => {
 
     const clientes_contratos = useMemo(() => {
         return dadosContrato.map(contrato => {
-            const cliente = dadosClientes.find(c => c.cpf === contrato.cpf_cliente)
+            const cliente = dadosClientes.find(c => c.id === contrato.cliente_id)
             return {...contrato, ...cliente}
         })
     },[dadosContrato, dadosClientes])
@@ -129,7 +129,7 @@ const Contratos = () => {
 
 
             return (
-            <div key={dados.cpf_cliente} className="flex flex-col border-[1.5px] border-stone-800/50 rounded-xl  bg-stone-100/50 px-6 py-8 hover:-translate-y-1 shadow-xl hover:border-emerald-500 shadow-stone-400/20">
+            <div key={dados.cliente_id} className="flex flex-col border-[1.5px] border-stone-800/50 rounded-xl  bg-stone-100/50 px-6 py-8 hover:-translate-y-1 shadow-xl hover:border-emerald-500 shadow-stone-400/20">
                 <div className="flex justify-between">
                     <div className="flex gap-3 items-center">
                         <span className={` rounded-full flex-shrink-0 py-5 flex items-center justify-center w-12 h-12 ${categorias[dados.segmento ?? ""] ?? backgroundPattern}`}>

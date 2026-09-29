@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import { Landmark, LockKeyhole, Phone, Search, X } from "lucide-react"
 
 interface Cliente {
-    id : string
+    id : number
     nome : string
     cpf : string
     telefone : string
@@ -20,7 +20,7 @@ interface Cliente {
 }
 
 interface Contrato {
-    cpf_cliente : string
+    cliente_id : number
     valor_mensal : string
     tempo_contrato : string
     forma_pagamento : string
@@ -112,9 +112,9 @@ const Pipeline = () => {
     const handleContratos = async (cliente : Cliente, contrato : Contrato[]) => {
         setClienteSelect(cliente)
 
-        const contrato_cliente = contrato.find((contrato_) => contrato_.cpf_cliente === cliente.cpf)
+        const contrato_cliente = contrato.find((contrato_) => contrato_.cliente_id === cliente.id)
         setContrato({
-            cpf_cliente: contrato_cliente?.cpf_cliente ?? "",
+            cliente_id: contrato_cliente?.cliente_id ?? 0,
             valor_mensal : contrato_cliente?.valor_mensal ?? "",
             forma_pagamento: contrato_cliente?.forma_pagamento ?? "",
             tempo_contrato : contrato_cliente?.tempo_contrato ?? ""
@@ -138,9 +138,9 @@ const Pipeline = () => {
         setClienteSelect(null)
     }
 
-    const deleteContrato = async(cpf : string, empresa : string) => {
+    const deleteContrato = async(cliente_id : number, empresa : string) => {
         try {
-            const response = await fetch(`${API_URL}/delete_contrato/${cpf}`, {
+            const response = await fetch(`${API_URL}/delete_contrato/${cliente_id}`, {
                 method:"DELETE",
                 headers: {
                     "Authorization" : `Bearer ${token}`,
@@ -187,7 +187,7 @@ const Pipeline = () => {
         }): prev)
 
         const contrato_fechado = {
-            "cpf": `${clienteSelect?.cpf}`,
+            "cliente_id": `${clienteSelect?.id}`,
             "valor_mensal":`${contrato?.valor_mensal}`,
             "forma_pagamento":`${contrato?.forma_pagamento}`,
             "tempo_contrato":`${contrato?.tempo_contrato}`,
@@ -319,7 +319,7 @@ const Pipeline = () => {
                             {dados.status === "diagnostico" ? "Fechar Contrato" : "Editar Contrato"}
                         </button>
                      {dados.status === "contratado" && (
-                        <button onClick={() => deleteContrato(dados.cpf, dados.empresa)} className="flex items-center gap-1 justify-around text-white bg-red-500 px-4 py-2 rounded-xl font-sans font-medium text-xs hover:bg-red-700">
+                        <button onClick={() => deleteContrato(dados.id, dados.empresa)} className="flex items-center gap-1 justify-around text-white bg-red-500 px-4 py-2 rounded-xl font-sans font-medium text-xs hover:bg-red-700">
                             <X className="w-4 h-4 text-white" />
                             Excluir Contrato
                         </button>
