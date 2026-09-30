@@ -243,7 +243,7 @@ const Tech = () => {
             return;
         }
 
-        console.log(localStorage.getItem(`Questionário Selah${empresa}`))
+        console.log('Questionário',localStorage.getItem(`Questionário Selah${empresa}`))
     
         const nota = perguntas[0].perguntas.reduce((acc, bloco) => {
             const resposta_Bloco = respostas.find((p) => p.code === bloco.codigo)
@@ -266,6 +266,8 @@ const Tech = () => {
         }
 
         localStorage.setItem(`Questionario${empresa}`, JSON.stringify(dadosAtuais))
+        const cliente_id = localStorage.getItem(`Cliente_id${empresa}`)
+        console.log('Cliente_id', cliente_id)
 
         try {
             const fetch_notas = await fetch(`${API_URL}/questionario`, {
@@ -274,7 +276,7 @@ const Tech = () => {
                     "Authorization" : `Bearer ${token}`,
                     "Content-Type" : "application/json"
                 },
-                body: JSON.stringify({empresa : empresa, notas : dadosAtuais.respostas})
+                body: JSON.stringify({ cliente_id : cliente_id ,empresa : empresa, notas : dadosAtuais.respostas})
             })
 
             if (!fetch_notas.ok) {
@@ -282,6 +284,7 @@ const Tech = () => {
                 throw new Error(data?.detail || "Erro ao enviar notas")
             } else {
                 toast.success("Dados Salvos e Enviados com sucesso")
+                localStorage.removeItem(`Cliente_id${empresa}`)
                 try {
                     const update_status = await fetch(`${API_URL}/status_cliente/${empresa}`, {
                         method:"PATCH",

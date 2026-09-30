@@ -65,17 +65,13 @@ export function AuthProvider( {children} : {children : ReactNode}) {
         }
 
         const data = await response.json()
-        console.log("Token salvo", data.token? "presente" : "ausente")
-        console.log("Dados",data)
 
         // Save do token para que ele persista entre as sessões
         localStorage.setItem("auth_token", data.token)
-        console.log("Token Salvo com sucesso no LocalStorage")
         //setUser({nome : data.nome, email: data.email})
 
         await fetchPlano(data.token)
         navigate("/menu")
-        console.log("Navigate acionado")
     };
 
     // Função logout

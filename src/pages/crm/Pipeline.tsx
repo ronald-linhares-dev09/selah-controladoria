@@ -4,7 +4,7 @@ import { toast } from "sonner"
 import { Landmark, LockKeyhole, Phone, Search, X } from "lucide-react"
 
 interface Cliente {
-    id : number
+    id : string
     nome : string
     cpf : string
     telefone : string
@@ -20,7 +20,7 @@ interface Cliente {
 }
 
 interface Contrato {
-    cliente_id : number
+    cliente_id : string
     valor_mensal : string
     tempo_contrato : string
     forma_pagamento : string
@@ -95,6 +95,7 @@ const Pipeline = () => {
 
     useEffect( () => { data_client() },[])
 
+
     const clientes_filtrados = dadosCliente.filter(c => 
         statusCliente === 'todos' ? c.status === "diagnostico" || c.status === "contratado" : c.status === statusCliente)
         .filter(c => 
@@ -108,13 +109,15 @@ const Pipeline = () => {
     const clientes_diagnosticados = dadosCliente.filter( c => 
         c.status === "diagnostico")
 
+    console.log(clientes_filtrados)
+
 
     const handleContratos = async (cliente : Cliente, contrato : Contrato[]) => {
         setClienteSelect(cliente)
 
         const contrato_cliente = contrato.find((contrato_) => contrato_.cliente_id === cliente.id)
         setContrato({
-            cliente_id: contrato_cliente?.cliente_id ?? 0,
+            cliente_id: contrato_cliente?.cliente_id ?? "",
             valor_mensal : contrato_cliente?.valor_mensal ?? "",
             forma_pagamento: contrato_cliente?.forma_pagamento ?? "",
             tempo_contrato : contrato_cliente?.tempo_contrato ?? ""
@@ -138,7 +141,7 @@ const Pipeline = () => {
         setClienteSelect(null)
     }
 
-    const deleteContrato = async(cliente_id : number, empresa : string) => {
+    const deleteContrato = async(cliente_id : string ) => {
         try {
             const response = await fetch(`${API_URL}/delete_contrato/${cliente_id}`, {
                 method:"DELETE",
@@ -153,7 +156,7 @@ const Pipeline = () => {
             } else {
                 toast.success("Contrato deletado com sucesso")
                 try {
-                    const response_ = await fetch(`${API_URL}/status_cliente/${empresa}`, {
+                    const response_ = await fetch(`${API_URL}/status_cliente/${cliente_id}`, {
                         method:"PATCH",
                         headers: {
                             "Authorization" : `Bearer ${token}`,
@@ -187,10 +190,10 @@ const Pipeline = () => {
         }): prev)
 
         const contrato_fechado = {
-            "cliente_id": `${clienteSelect?.id}`,
-            "valor_mensal":`${contrato?.valor_mensal}`,
-            "forma_pagamento":`${contrato?.forma_pagamento}`,
-            "tempo_contrato":`${contrato?.tempo_contrato}`,
+            "cliente_id": clienteSelect?.id,
+            "valor_mensal": contrato?.valor_mensal,
+            "forma_pagamento": contrato?.forma_pagamento,
+            "tempo_contrato": contrato?.tempo_contrato,
         }
         try {
 
@@ -319,7 +322,7 @@ const Pipeline = () => {
                             {dados.status === "diagnostico" ? "Fechar Contrato" : "Editar Contrato"}
                         </button>
                      {dados.status === "contratado" && (
-                        <button onClick={() => deleteContrato(dados.id, dados.empresa)} className="flex items-center gap-1 justify-around text-white bg-red-500 px-4 py-2 rounded-xl font-sans font-medium text-xs hover:bg-red-700">
+                        <button onClick={() => deleteContrato(dados.id)} className="flex items-center gap-1 justify-around text-white bg-red-500 px-4 py-2 rounded-xl font-sans font-medium text-xs hover:bg-red-700">
                             <X className="w-4 h-4 text-white" />
                             Excluir Contrato
                         </button>

@@ -28,7 +28,7 @@ const conexoes = [
 
 
 const Diagnostico = () => {
-    const { empresa } = useParams()
+    const { id, empresa } = useParams()
     const token = localStorage.getItem("auth_token")
     const [notas, setNotas] = useState<Notas>({})
     const [conclusao, setConclusao] = useState("")
@@ -40,7 +40,7 @@ const Diagnostico = () => {
     useEffect(() => {
         const handleNotas = async () => {
           try {
-            const response = await fetch(`${API_URL}/notas_questionario/${empresa}`, {
+            const response = await fetch(`${API_URL}/notas_questionario/${id}`, {
                 method:"GET",
                 headers: {
                     "Content-Type" : "application/json",
@@ -67,7 +67,7 @@ const Diagnostico = () => {
     const handleConclusao = async() => {
         try {
             setSalvando(true)
-            const response = await fetch(`${API_URL}/data_conclusao/${empresa}`, {
+            const response = await fetch(`${API_URL}/data_conclusao/${id}`, {
                 method:"PATCH",
                 headers: {
                     'Authorization' : `Bearer ${token}`,

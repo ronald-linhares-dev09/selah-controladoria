@@ -89,7 +89,7 @@ const Cadastro = () => {
                     <div className="flex flex-col gap-1">
                      <label className="text-xs text-gray-950 font-medium tracking-wide uppercase" htmlFor="nome">Nome Completo</label>
                      <input className="rounded-lg text-sm bg-gray-100/70 border border-gray-950 px-3 py-2 text-gray-700 placeholder-gray-600/30 focus:outline-none
-                      focus:border-emerald-400" type="text" placeholder="João Mendes" id="nome" onChange={(e) => setNome(e.target.value)}></input>
+                      focus:border-emerald-400" type="text" placeholder="João Mendes" value={nome} id="nome" onChange={(e) => setNome(e.target.value)}></input>
                     </div>
 
                     <div className="flex flex-col gap-1">
@@ -106,7 +106,7 @@ const Cadastro = () => {
                     <div className="flex flex-col gap-1">
                      <label className="text-xs text-gray-950 font-medium tracking-wide uppercase" htmlFor="telefone">Email</label>
                      <input className="rounded-lg text-sm bg-gray-100/70 border border-gray-950 px-3 py-2 text-gray-700
-                      placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" type="text" placeholder="nome@email.com" id="email"  onChange={(e) => setEmail(e.target.value)}></input>
+                      placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" value={email} type="text" placeholder="nome@email.com" id="email"  onChange={(e) => setEmail(e.target.value)}></input>
                     </div>
                 </div>
             </div>
@@ -121,7 +121,7 @@ const Cadastro = () => {
                         <div className="flex flex-col gap-1">
                             <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="empresa">Nome da Empresa</label>
                             <input type="text" placeholder="Empresa Ltda" id="empresa" className="bg-gray-100/70 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                             placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" value={nome} onChange={(e) => setEmpresa(e.target.value)}></input>
+                             placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" value={empresa} onChange={(e) => setEmpresa(e.target.value)}></input>
                         </div>
                     
 

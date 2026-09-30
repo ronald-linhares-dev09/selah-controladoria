@@ -7,14 +7,14 @@ const analises = [
 ]
 
 export const StepperIndicadores = () => {
-    const { empresa } = useParams()
+    const { id, empresa } = useParams()
 
    return (
 
     <nav className="flex absolute left-1/2 -translate-x-1/2 items-center gap-6 ">
         {analises.map((analise) => (
             <NavLink 
-              to={`/clientes/${empresa}/diagnostico/${analise.rota}`}
+              to={`/clientes/${id}/${empresa}/diagnostico/${analise.rota}`}
               className="flex flex-col items-center w-full"
               >
               {({ isActive }) => (

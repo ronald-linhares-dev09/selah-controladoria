@@ -6,6 +6,7 @@ import { formatarCNPJ, formatarCPF, formatarTelefone } from "../../utils/mascara
 import {useNavigate } from "react-router-dom";
 
 interface Cliente {
+    id : string
     nome : string
     cpf : string
     telefone : string
@@ -47,7 +48,7 @@ const Clientes = () => {
     const [busca, setBusca] = useState("")
     const [modal, setModal] = useState(false)
     const [clienteEdit, setClienteEdit] = useState<Cliente | null>(null)
-    const handleQuestionario = (status : string, empresa : string) => {
+    const handleQuestionario = (cliente_id : string, status : string, empresa : string) => {
         if (status === "contratado" || status === "diagnostico") {
             navigate(`/clientes/form/${encodeURIComponent(empresa)}/gestao`)
             return
@@ -57,6 +58,8 @@ const Clientes = () => {
             const dados = JSON.parse(localStorage.getItem(`Questionario${empresa}`) 
             ?? JSON.stringify({pilaresLiberados : [], respostas : {}}))
 
+            localStorage.setItem(`Cliente_id${empresa}`, cliente_id)
+
             dados.pilaresLiberados = [... new Set([...dados.pilaresLiberados, 1,2,3,4,5,6,7])]
 
             localStorage.setItem(`Questionario${empresa}`, JSON.stringify(dados))
@@ -64,9 +67,9 @@ const Clientes = () => {
         }
     }
 
-    const handleCliente = async (empresa : string) => {
+    const handleCliente = async (cliente_id : string) => {
         try {
-            const response_update = await fetch(`${API_URL}/status_cliente/${empresa}`, {
+            const response_update = await fetch(`${API_URL}/status_cliente/${cliente_id}`, {
                 method:"PATCH",
                 headers: {   
                     "Authorization" : `Bearer ${token}`,
@@ -80,7 +83,7 @@ const Clientes = () => {
                 throw new Error(data?.detail || "Erro ao atualizar status do cliente")
             } else {
                 console.log("Cliente atualizado com sucesso")
-                setDataClient(prev => prev.map((p) => p.empresa === empresa ? {...p, status : "em_negociacao"} : p))
+                setDataClient(prev => prev.map((p) => p.id === cliente_id ? {...p, status : "em_negociacao"} : p))
                 toast.success("Questionário Disponível")
             }
         } catch (erro) {
@@ -122,10 +125,10 @@ const Clientes = () => {
     )
     .filter(c => filtroStatus === "todos" || c.status === filtroStatus)
 
-    const handleDelete = async(cpf : string) => {
+    const handleDelete = async(cliente_id : string) => {
 
         try {
-            const response = await fetch(`${API_URL}/clientes/${cpf}`, {
+            const response = await fetch(`${API_URL}/clientes/${cliente_id}`, {
                 method:"DELETE",
                 headers:{"Authorization" : `Bearer ${token}`}
             })
@@ -136,7 +139,7 @@ const Clientes = () => {
             }
             else {
                 toast.success("Cliente Deletado com Sucesso")
-                setDataClient(prev => prev.filter(c => c.cpf !== cpf))
+                setDataClient(prev => prev.filter(c => c.id !== cliente_id ))
             }
         } catch (erro) {
             toast.error(erro instanceof Error ? erro.message : "Erro interno no Sistema")
@@ -173,7 +176,7 @@ const Clientes = () => {
         }
 
         try {
-            const response = await fetch(`${API_URL}/update_cliente/${clienteEdit.cpf}`, {
+            const response = await fetch(`${API_URL}/update_cliente/${clienteEdit.id}`, {
                 method : "PUT",
 
                 headers : {
@@ -190,7 +193,7 @@ const Clientes = () => {
             }
 
             else {
-                setDataClient(prev => prev.map(c => c.cpf === clienteEdit.cpf ? {...c, ...payload} : c))
+                setDataClient(prev => prev.map(c => c.id === clienteEdit.id ? {...c, ...payload} : c))
                 toast.success("Dados atualizados com sucesso")
                 fecharModal()
             }
@@ -342,7 +345,7 @@ const Clientes = () => {
                                dados.status === "contratado" ? "grid grid-cols-2 items-center gap-3" : "flex justify-around gap-4"} mt-3`}>
                 {(dados.status === 'em_negociacao' || dados.status === 'diagnostico' || dados.status === 'contratado') && (              
                     <button onClick={() => {
-                           handleQuestionario(dados.status, dados.empresa)
+                           handleQuestionario(dados.id, dados.status, dados.empresa)
                         }} 
                          className="flex items-center justify-center hover:bg-emerald-800 text-emerald-800 hover:text-white gap-2 border rounded-lg border-emerald-800 px-8 w-full ">            
                          <Edit className="w-3 h-3" />
@@ -353,7 +356,7 @@ const Clientes = () => {
                 {(dados.status === 'diagnostico' || dados.status === 'contratado')  && (
 
                     <button onClick={() => {
-                            navigate(`/clientes/${encodeURIComponent(dados.empresa)}/diagnostico/geral`)
+                            navigate(`/clientes/${encodeURIComponent(dados.id)}/${encodeURIComponent(dados.empresa)}/diagnostico/geral`)
                     }} 
                          className="flex items-center justify-center hover:bg-yellow-800 text-yellow-800 hover:text-white gap-2 border rounded-lg border-yellow-800 px-8 w-full ">            
                          <Edit className="w-3 h-3" />
@@ -377,7 +380,7 @@ const Clientes = () => {
                             <p className="font-sans text-sm">Editar</p>
                 </button>
 
-                <button onClick={() => handleDelete(dados.cpf)}   className="flex items-center justify-center gap-2 hover:bg-red-800 text-red-800 hover:text-white border rounded-lg border-red-800 px-8 w-full ">
+                <button onClick={() => handleDelete(dados.id)}   className="flex items-center justify-center gap-2 hover:bg-red-800 text-red-800 hover:text-white border rounded-lg border-red-800 px-8 w-full ">
                             <Delete className="w-3 h-3" />
                             <p className="font-sans text-sm">Excluir</p>
                 </button>

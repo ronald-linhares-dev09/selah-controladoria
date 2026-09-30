@@ -65,8 +65,8 @@ const AppRoutes = () => (
        <AppDiagnostico />
       </ProtectedRoute>
     }>
-      <Route path="/clientes/:empresa/diagnostico/geral" element={<Diagnostico />} />
-      <Route path="/clientes/:empresa/diagnostico/individual" element={<DiagnosticoIndividual />} />
+      <Route path="/clientes/:id/:empresa/diagnostico/geral" element={<Diagnostico />} />
+      <Route path="/clientes/:id/:empresa/diagnostico/individual" element={<DiagnosticoIndividual />} />
     </Route>
 
     <Route element={
