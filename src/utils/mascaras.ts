@@ -24,3 +24,7 @@ export const formatarCNPJ = (valor : string) : string => {
     .replace(/(\d{4})(\d{1,2})$/, "$1-$2")
     .slice(0,18)
 }
+
+export const formatarCEP = (valor : string) : string => {
+    return valor.replace(/\D/g, "")
+}

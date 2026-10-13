@@ -44,15 +44,15 @@ export const AppDiagnostico = () => {
          </header>
 
 
-        <main  className="flex-1 overflow-y-auto bg-slate-50">
-            <div className="flex justify-between items-center px-16 mt-6 relative w-full ">
+        <main  className="flex-1 overflow-y-auto w-full bg-gray-100">
+            <div className="flex justify-between items-center relative px-10 bg-white ">
                 <div className="flex flex-col items-start">
-                    <h3 className="font-extralight font-serif tracking-widest text-[10px]">Empresa</h3>
+                    <h3 className="font-bold uppercase text-gray-500 font-serif tracking-widest text-[12px]">Empresa</h3>
                     <h1 className="text-gray-950 font-bold font-serif text-4xl mt-1">{empresa}</h1> 
                 </div>
 
                 <StepperIndicadores />
-                <img className="w-28 h-28" src={logo} />
+                <img className="w-32 h-32" src={logo} />
             </div>            
 
             <Outlet />

@@ -33,7 +33,7 @@ export const SidebarFinanceiro = ({ collapsed = false} : SidebarProps) => {
         )}
 
         {!collapsed && (
-            <p className="text-white font-sans text-sm text-center mt-3">Bem Vindo, {user?.nome}!</p>
+            <p className="text-white font-sans text-sm text-left mt-3 ml-2">Bem Vindo, {user?.nome}!</p>
         )}
 
         { collapsed ? (

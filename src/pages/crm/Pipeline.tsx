@@ -1,30 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
-import { API_URL } from "../../config/api"
 import { toast } from "sonner"
-import { Landmark, LockKeyhole, Phone, Search, X } from "lucide-react"
+import { Handshake, Landmark, Phone, Search, X } from "lucide-react"
+import { atualizar_status_cliente, lista_clientes} from "../../services/clientes"
+import type { Cliente } from "../../schemas/clientes"
+import type { Contrato } from "../../schemas/contratos"
+import { criar_contrato, deletar_contrato, obter_contrato } from "../../services/contratos"
 
-interface Cliente {
-    id : string
-    nome : string
-    cpf : string
-    telefone : string
-    email : string
-    empresa : string
-    segmento : string
-    cnpj : string
-    cep : string
-    estado : string
-    cidade : string
-    endereco : string
-    status : string
-}
-
-interface Contrato {
-    cliente_id : string
-    valor_mensal : string
-    tempo_contrato : string
-    forma_pagamento : string
-}
 
 const iniciais = (nome : string) =>{
     return nome.split(" ").slice(0,2).map(n => n[0]).join("")
@@ -43,7 +24,6 @@ const pagamento = ["Cartão de Crédito", "Cartão de Débito", "Pix", "Dinheiro
 
 const Pipeline = () => {
 
-    const token = localStorage.getItem("auth_token")
     const [dadosCliente, setDadosCliente] = useState<Cliente[]>([])
     const [search, setSearch] = useState("")
     const [modal, setModal] = useState(false)
@@ -54,39 +34,15 @@ const Pipeline = () => {
  
     const data_client = async () => {
         try {
-            const response = await fetch(`${API_URL}/dados_clientes`, 
-                {
-                method:"GET",
-                headers: {
-                    "Authorization" : `Bearer ${token}`,
-                    "Content-Type" : "application/json"
-                }}) 
-
-            const data = await response.json()
-            
-            if (!response.ok) {
-                throw new Error (data?.detail || "Erro ao buscar dados dos clientes")
-            } else {
-                setDadosCliente(data.clientes)
-
-                try {
-                    const response_contratos = await fetch(`${API_URL}/dados_contrato`, {
-                        method:"GET",
-                        headers: {
-                            "Authorization":`Bearer ${token}`,
-                            "Content-Type":"application/json"
-                        }
-                    })
-                        const get = await response_contratos.json()
-
-                        if (!response_contratos.ok) {
-                            throw new Error (get?.detail || "Erro ao buscar contratos")
-                        } else {
-                            setDadosContrato(get.contrato)
-                        }
-                } catch (erro) {
-                  console.error(erro)
-                }
+            const data = await lista_clientes()
+            setDadosCliente(data)
+            try {
+                const contratos = await obter_contrato()
+                    
+                setDadosContrato(contratos)
+                    
+            } catch (erro) {
+                console.error(erro)
             }
        } catch (erro) {
         toast.error(erro instanceof Error ? erro.message : "Erro interno ao buscar clientes/contratos")
@@ -108,9 +64,6 @@ const Pipeline = () => {
 
     const clientes_diagnosticados = dadosCliente.filter( c => 
         c.status === "diagnostico")
-
-    console.log(clientes_filtrados)
-
 
     const handleContratos = async (cliente : Cliente, contrato : Contrato[]) => {
         setClienteSelect(cliente)
@@ -143,39 +96,17 @@ const Pipeline = () => {
 
     const deleteContrato = async(cliente_id : string ) => {
         try {
-            const response = await fetch(`${API_URL}/delete_contrato/${cliente_id}`, {
-                method:"DELETE",
-                headers: {
-                    "Authorization" : `Bearer ${token}`,
-                    "Content-Type" : "application/json"
-                }
-            })
+            await deletar_contrato(cliente_id)
 
-            if (!response.ok) {
-                throw new Error(await response.json())
-            } else {
-                toast.success("Contrato deletado com sucesso")
-                try {
-                    const response_ = await fetch(`${API_URL}/status_cliente/${cliente_id}`, {
-                        method:"PATCH",
-                        headers: {
-                            "Authorization" : `Bearer ${token}`,
-                            "Content-Type" : "application/json"
-                        },
-                        body: JSON.stringify({status : "diagnostico"})
-                    })
-
-                    if (!response_.ok) {
-                        throw new Error (await response_.json())
-                    } else {
-                       console.log("Status atualizado com sucesso")
-                    }
-                } catch (erro) {
-                    console.log(erro instanceof Error ? erro.message : "Erro ao atualizar status do cliente")
-                }
-                await data_client()
+            toast.success("Contrato deletado com sucesso")
+            try {
+                await atualizar_status_cliente(cliente_id,'diagnostico')
+                console.log("Status atualizado com sucesso")
                 
+            } catch (erro) {
+                console.log(erro instanceof Error ? erro.message : "Erro ao atualizar status do cliente")
             }
+            await data_client()
         } catch (erro) {
             console.log(erro instanceof Error ? erro.message : "Erro ao deletar contrato")
             toast.error("Contrato não deletado")
@@ -189,56 +120,22 @@ const Pipeline = () => {
                 status : "contratado"            
         }): prev)
 
-        const contrato_fechado = {
-            "cliente_id": clienteSelect?.id,
-            "valor_mensal": contrato?.valor_mensal,
-            "forma_pagamento": contrato?.forma_pagamento,
-            "tempo_contrato": contrato?.tempo_contrato,
+        const contrato_fechado : Contrato = {
+            "cliente_id": clienteSelect?.id ?? "",
+            "valor_mensal": contrato?.valor_mensal ?? "",
+            "forma_pagamento": contrato?.forma_pagamento ?? "",
+            "tempo_contrato": contrato?.tempo_contrato ?? "",
         }
         try {
-
-            const response = await fetch (`${API_URL}/contrato_cliente`, {
-
-                method:"POST",
-                headers: {
-                    "Authorization":`Bearer ${token}`,
-                    "Content-Type":"application/json"
-                },
-                body: JSON.stringify(contrato_fechado)
-            })
-
-            const data = await response.json()
-
-            if (!response.ok) {
-                throw new Error( data?.detail || "Erro ao enviar dados do contrato")
-
-            } else {
-                toast.success("Contrato criado")
-                try {
-                    const patch = await fetch(`${API_URL}/status_cliente/${clienteSelect?.empresa}`, {
-                        method:"PATCH",
-                        headers: {
-                            "Authorization":`Bearer ${token}`,
-                            "Content-Type" : "application/json"
-                        },
-                        body : JSON.stringify({ status : "contratado"})
-                    })
-
-                    if (!patch.ok) {
-                        const patch_data = await patch.json()
-                        throw new Error(patch_data?.detail || "Erro ao atualizar status do cliente")
-                    } else {
-                        console.log("Dados inseridos com sucesso!")
-
-                    }
-                } catch (erro) {
-                 console.log(erro)
-                }
-                fecharmodal()
-                await data_client()
-                
-                
+            await criar_contrato(contrato_fechado)
+            toast.success("Contrato criado")
+            try {
+                console.log("Status atualizado")
+            } catch (erro) {
+                console.log(erro)
             }
+            fecharmodal()
+            await data_client()         
         } catch (erro) {
             console.log(erro)
             toast.error(erro instanceof Error ? erro.message : "Erro interno no sistema")
@@ -246,37 +143,38 @@ const Pipeline = () => {
     }
 
     return(
-        <div className="flex flex-col px-24 py-10 mt-2">
+        <div className="flex flex-col w-full">
 
-            <div className="flex flex-col items-start justify-center gap-1">
-                <p className="font-serif text-gray-600 font-extralight tracking-widest text-xs uppercase">Área Financeira</p>
+            <div className="flex flex-col items-start justify-center px-10 pt-10 pb-7 gap-1">
+                <p className="font-bold uppercase text-gray-500 font-serif tracking-widest text-[10px]">Área Financeira</p>
                 <h1 className="font-semibold text-gray-900 font-serif text-3xl">Pipeline<strong className="text-emerald-400"> de Vendas</strong></h1>
             </div>
 
-            <div className="flex gap-4 mt-5">
-                <div className="flex flex-col items-start justify-center border border-gray-400 bg-stone-100/30  rounded-lg w-full  py-7 px-4">
+        <section className="bg-gray-100 px-10 py-6 flex flex-col gap-4 h-screen min-h-screen flex-1">
+            <div className="flex gap-4">
+                <div className="flex flex-col items-start justify-center border border-gray-400 bg-white  rounded-lg w-full  py-7 px-4">
                  <p className="text-gray-500 uppercase tracking-widest font-semibold text-xs mb-1">Em Negociação</p>
                  <h1 className="text-gray-900 text-3xl font-sans font-bold">{clientes_diagnosticados.length}</h1>
                 </div>
 
-                <div className="flex flex-col items-start justify-center border border-gray-400 bg-stone-100/30 rounded-lg w-full  py-7 px-4">
+                <div className="flex flex-col items-start justify-center border border-gray-400 bg-white rounded-lg w-full  py-7 px-4">
                  <p className="text-gray-500 uppercase tracking-widest font-semibold text-xs mb-1">Receita Potencial</p>
                  <h1 className="text-emerald-500 text-3xl font-sans font-bold">R${valor_total_mensal.toFixed(2)}</h1>
 
                 </div>
 
-                <div className="flex flex-col items-start justify-center border border-gray-400 bg-stone-100/30  rounded-lg w-full  py-7 px-4">
+                <div className="flex flex-col items-start justify-center border border-gray-400 bg-white  rounded-lg w-full  py-7 px-4">
                  <p className="text-gray-500 uppercase tracking-widest font-semibold text-xs mb-1">Fechados no Mês</p>
                  <h1 className="text-gray-900 text-3xl font-sans font-bold">{clientes_fechados.length}</h1>
                 </div>
             </div>       
 
-            <div className="relative mt-5">
+            <div className="relative">
                 <Search className="pointer-events-none absolute top-1/2 -translate-y-1/2 left-3 w-4 h-4 text-gray-500" />
-                <input value={search} onChange={(e) => setSearch(e.target.value)} className="text-sm text-gray-900 w-full pl-10 pr-4 py-3 focus:outline-none bg-stone-100/30 border border-gray-600 hover:border-emerald-500 focus:border-emerald-500 transition-colors rounded-xl" type="text" placeholder="Digite o nome do cliente ou da empresa..."></input>
+                <input value={search} onChange={(e) => setSearch(e.target.value)} className="text-sm text-gray-900 w-full pl-10 pr-4 py-3 focus:outline-none bg-white border border-gray-600 hover:border-emerald-500 focus:border-emerald-500 transition-colors rounded-xl" type="text" placeholder="Digite o nome do cliente ou da empresa..."></input>
             </div>
 
-            <div className="flex gap-2 mt-3">
+            <div className="flex gap-2 ">
                 {[
                     { valor : "todos", label : "Todos"},
                     { valor : "diagnostico", label : "Diagnóstico"},
@@ -285,16 +183,16 @@ const Pipeline = () => {
                     <button key={filtro.valor} onClick={() => setStatusCliente(filtro.valor)}
                      className={`text-xs py-1.5 px-3 rounded-full border transition-colors
                         ${filtro.valor === statusCliente ? "bg-emerald-500 text-white border-emerald-500" 
-                            : "text-gray-600 border-gray-300 bg-gray-100 hover:border-emerald-500 "}
+                            : "text-gray-600 border-gray-300 bg-white hover:border-emerald-500 "}
                             `}>
                         {filtro.label}
                     </button>
                 ))}
             </div>                 
 
-            <div className="flex flex-col gap-4 mt-7">
+            <div className="flex flex-col gap-4">
                 {clientes_filtrados.map((dados) => (
-                    <div className="flex items-center justify-between w-full gap-4 rounded-2xl border border-gray-600 hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-gray-200 hover:border-emerald-700 bg-stone-100/30  py-5 px-6 ">
+                    <div className="flex items-center justify-between w-full gap-4 rounded-2xl border border-gray-600 hover:shadow-gray-200 hover:border-emerald-700 bg-white  py-5 px-6 ">
                         
                         <div className="flex items-center gap-4">
                             <div className={`rounded-full flex-shrink-0 py-5 flex items-center justify-center w-12 h-12 ${categorias[dados.segmento] ?? backgroundPattern}`}>
@@ -318,11 +216,11 @@ const Pipeline = () => {
                         <button onClick={() =>                            
                                 handleContratos(dados, dadosContrato)                           
                         } className="flex items-center gap-1 justify-around text-white bg-emerald-500 px-4 py-2 rounded-xl font-sans font-medium text-xs hover:bg-emerald-700">
-                            <LockKeyhole className="w-4 h-4 text-white" />
+                            <Handshake  className="w-4 h-4 text-white" />
                             {dados.status === "diagnostico" ? "Fechar Contrato" : "Editar Contrato"}
                         </button>
                      {dados.status === "contratado" && (
-                        <button onClick={() => deleteContrato(dados.id)} className="flex items-center gap-1 justify-around text-white bg-red-500 px-4 py-2 rounded-xl font-sans font-medium text-xs hover:bg-red-700">
+                        <button onClick={() => deleteContrato(dados.id)} className="flex items-center gap-1 justify-around text-white bg-gray-800 px-4 py-2 rounded-xl font-sans font-medium text-xs hover:bg-gray-900">
                             <X className="w-4 h-4 text-white" />
                             Excluir Contrato
                         </button>
@@ -412,7 +310,7 @@ const Pipeline = () => {
 
 
             
-
+         </section>
         </div>
     )
 }

@@ -115,7 +115,7 @@ export const Sidebar = ({ collapsed = false} : SidebarProps) => {
                 <p className="text-gray-200">Clientes</p>
                 </NavLink>
 
-                {(pilares.length > 0 && pathname.includes("form")) && ( 
+                {(pilares.length > 0 || pathname.includes("form")) && ( 
                     <div 
                     className= "px-2 py-1 mr-auto mt-3  rounded-xl w-full text-sm font-medium transition-opacity gap-8 flex items-center justify-start  text-gray-300 bg-gray-800">
                      <Waypoints className="w-4 h-4 text-white" />

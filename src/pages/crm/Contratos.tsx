@@ -1,31 +1,11 @@
 import { useEffect, useState, useMemo } from "react"
-import { API_URL } from "../../config/api"
 import { toast } from "sonner"
 import { Search } from "lucide-react"
+import type { Cliente } from "../../schemas/clientes"
+import type { ContratoRead } from "../../schemas/contratos"
+import { lista_clientes_filter } from "../../services/clientes"
+import { obter_contrato } from "../../services/contratos"
 
-interface Cliente {
-    id : string
-    nome : string
-    cpf : string
-    telefone : string
-    email : string
-    empresa : string
-    segmento : string
-    cnpj : string
-    cep : string
-    estado : string
-    cidade : string
-    endereco : string
-    status : string
-}
-
-interface Contrato {
-    cliente_id : string
-    valor_mensal : string
-    tempo_contrato : string
-    forma_pagamento : string
-    created_at : string
-}
 const categorias : Record<string,string> = {
     "Varejo" : "bg-emerald-500/20 text-emerald-600",
     "Tecnologia" : "bg-blue-500/20 text-blue-600",
@@ -40,50 +20,25 @@ const inicias = ( nome : string) => {
 
 const Contratos = () => {
     
-    const token = localStorage.getItem("auth_token")
     const [dadosClientes, setDadosCliente] = useState<Cliente[]>([])
-    const [dadosContrato, setDadosContrato] = useState<Contrato[]>([])
+    const [dadosContrato, setDadosContrato] = useState<ContratoRead[]>([])
     const [search, setSearch] = useState("")
 
     useEffect( () => {
         const fetch_dados = async() => {
             try {
-                const response = await fetch(`${API_URL}/clientes_fechados`, {
-                    method:"GET",
-                    headers: {
-                        "Content-Type":"application/json",
-                        "Authorization": `Bearer ${token}`
-                    }
-                })
-
-                const data = await response.json()
-                
-                if (!response.ok) {
-                    throw new Error(data?.detail || "Erro ao buscar dados do cliente")
-                } else {
-                    setDadosCliente(data.clientes)
-                    console.log("Dados dos clientes recebidos")
+                const data = await lista_clientes_filter({param : 'status', value : 'contratado'})
+            
+                setDadosCliente(data.clientes)
+                console.log("Dados dos clientes recebidos")
                     try {
-                        const response_contrato = await fetch(`${API_URL}/dados_contrato`, {
-                            method:"GET",
-                            headers: {
-                                "Content-Type":"application/json",
-                                "Authorization": `Bearer ${token}`
-                            }
-                        })
+                        const data_contrato = await obter_contrato()
 
-                        const data_contrato = await response_contrato.json()
-
-                        if (!response_contrato.ok) {
-                         throw new Error(data_contrato?.detail || "Erro ao buscar dados do contrato")
-                        } else {
-                            setDadosContrato(data_contrato.contrato)
-                            console.log("Dados do contrato recebidos")
-                        } 
+                        setDadosContrato(data_contrato)
+                        console.log("Dados do contrato recebidos")
                     } catch (erro) {
                         console.log(erro)
                     }
-                }
             } catch (erro) {
                 toast.error(erro instanceof Error ? erro.message : "Erro ao buscar dados do cliente")
             }
@@ -110,17 +65,20 @@ const Contratos = () => {
      clientes_contratos.filter(c => c.nome?.toLowerCase().includes(search.toLocaleLowerCase()))
 
     return(
-        <div className="flex flex-col px-24 py-12 mt-2 gap-6">
-            <div className="flex flex-col items-start justify-center">
-                <p className="font-serif text-xs uppercase tracking-widest text-gray-500">Área Financeira</p>
+        <div className="flex flex-col w-full ">
+
+            <div className="flex flex-col items-start px-10 pt-10 pb-7 justify-center">
+                <p className="font-bold uppercase text-gray-500 font-serif tracking-widest text-[10px]">Área Financeira</p>
                 <h2 className="text-3xl font-serif font-bold text-gray-950">Contratos <span className="text-emerald-500">Ativos</span></h2>
             </div>
 
-            <div className="relative">
-                <Search className="-translate-y-1/2 absolute top-1/2 w-4 h-4 pointer-events-none left-4 text-gray-500" />
-                <input type="text" onChange={(e) => setSearch(e.target.value)} placeholder="Digite o nome do cliente"
-                className="border border-stone-800 bg-stone-100/50 text-gray-900 font-sans text-sm w-full rounded-xl pl-10 pr-2 py-3 transition-colors focus:outline-none hover:border-emerald-500 focus:border-emerald-500"></input>
-            </div>
+            <section className="bg-gray-100 px-10 py-6 flex flex-col gap-4 min-h-screen h-screen flex-1">
+
+                <div className="relative">
+                    <Search className="-translate-y-1/2 absolute top-1/2 w-4 h-4 pointer-events-none left-4 text-gray-500" />
+                    <input type="text" onChange={(e) => setSearch(e.target.value)} placeholder="Digite o nome do cliente"
+                    className="border border-stone-800 bg-white text-gray-900 font-sans text-sm w-full rounded-xl pl-10 pr-2 py-3 transition-colors focus:outline-none hover:border-emerald-500 focus:border-emerald-500"></input>
+                </div>
 
          {filter_contratos.map((dados)=> {
             const passados = mesesContrato(dados.created_at)
@@ -129,7 +87,7 @@ const Contratos = () => {
 
 
             return (
-            <div key={dados.cliente_id} className="flex flex-col border-[1.5px] border-stone-800/50 rounded-xl  bg-stone-100/50 px-6 py-8 hover:-translate-y-1 shadow-xl hover:border-emerald-500 shadow-stone-400/20">
+            <div key={dados.cliente_id} className="flex flex-col border-[1.5px] border-gray-800/50 rounded-xl  bg-white px-6 py-8  hover:border-emerald-500">
                 <div className="flex justify-between">
                     <div className="flex gap-3 items-center">
                         <span className={` rounded-full flex-shrink-0 py-5 flex items-center justify-center w-12 h-12 ${categorias[dados.segmento ?? ""] ?? backgroundPattern}`}>
@@ -161,6 +119,7 @@ const Contratos = () => {
 
             </div>
         )})}
+            </section>
 
         </div>
     )

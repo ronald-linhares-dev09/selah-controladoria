@@ -2,6 +2,8 @@ import { createContext, useEffect, useState, useContext } from "react";
 import type { ReactNode } from "react";
 import { API_URL } from "../config/api";
 import { useNavigate } from "react-router-dom";
+import { auth_login, auth_logout, obter_token, supabase_cliente } from "../lib/supabase";
+import { toast } from "sonner";
 
 interface AuthUser {
     nome : string;
@@ -11,7 +13,6 @@ interface AuthUser {
 interface AuthContextType {
     user : AuthUser | null;
     loading : boolean;
-    token : string | null;
     login : (email : string, senha :string) => Promise<void>;
     logout : () => void
 }
@@ -19,83 +20,83 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider( {children} : {children : ReactNode}) {
-    const [token, setToken] = useState<string | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [user, setUser] = useState<AuthUser | null>(null);
 
     const navigate = useNavigate()
 
-    const fetchPlano = async (token : string) => {
-         try {
-            const response = await fetch(`${API_URL}/dados_user`, {
+    const fetchPlano = async () => {
+        const token = await obter_token()
+        const response = await fetch(`${API_URL}/dados_user`, {
                 method:"GET",        
                 headers:{
                          "Authorization" : `Bearer ${token}`
                         }
-            }
-
-            );
-
-            if (response.ok) {
-                const data = await response.json()
-                setUser({nome : data.nome, email : data.email});
-                setToken(token)
-            } else {
-                localStorage.removeItem("auth_token")
-            }
-         } catch (erro) {
-            console.log("Erro ao buscar dados",erro)
-            localStorage.removeItem("auth_token")
-         } finally {
-            setLoading(false)
-         }};
-    
-    // Fetch para Login
-
-    const login = async (email : string, senha : string) => {
-        const response = await fetch(`${API_URL}/login`, {
-            method : "POST",
-            headers : {"Content-Type" : "application/json"},
-            body : JSON.stringify({email, senha})}
-        )
+        })
 
         if (!response.ok) {
             const data = await response.json()
-            throw new Error(data.detail || "Credenciais Inválidas")
-        }
+            throw new Error(data?.detail ?? "Erro ao buscas dados do usuário")
+        } 
 
         const data = await response.json()
+        setUser({nome : data.nome, email : data.email})
+    }
 
-        // Save do token para que ele persista entre as sessões
-        localStorage.setItem("auth_token", data.token)
-        //setUser({nome : data.nome, email: data.email})
 
-        await fetchPlano(data.token)
-        navigate("/menu")
+    const login = async (email : string, senha : string) => {
+        try {
+            await auth_login(email, senha)
+            await fetchPlano()
+            navigate("/menu")
+
+        } catch (erro) {
+            console.error(erro)
+            toast.error(erro instanceof Error ? erro.message : "Credenciais Inválidas")
+        }
     };
 
-    // Função logout
 
     useEffect(() => {
-     const tokenSalvo = localStorage.getItem("auth_token")
-
-     if (tokenSalvo) {
-        fetchPlano(tokenSalvo)
-     } else {
-        setLoading(false)
-     }
+        try {
+            const { data : { subscription }} = supabase_cliente.auth.onAuthStateChange(async (event) => {
+                switch(event) {
+                    case 'TOKEN_REFRESHED':
+                        console.log('Token renovado')
+                        break;
+                    case 'SIGNED_IN' :
+                        console.log('Usuário logado')
+                        break;
+                    case 'SIGNED_OUT' :
+                        console.log('Logout do usuário')
+                        break;
+                    case 'INITIAL_SESSION' :
+                        console.log('Sessão recuperada')
+                        await fetchPlano()
+                        navigate("/menu")
+                        break
+                }
+            })
+            return () => subscription.unsubscribe();
+        } finally {
+            setLoading(false)
+        }
     }, []);
 
-    const logout = () => {
-        localStorage.removeItem("auth_token")
-        setToken(null)
+    const logout = async() => {
+        try {
+            await auth_logout()
+        } catch (erro) {
+            toast.error('Erro no logout')
+            console.error(erro)
+        }
         setUser(null)
         navigate("/login")
     }
 
 
     return (
-        <AuthContext.Provider value={{user, loading, token, login, logout}}>
+        <AuthContext.Provider value={{login, logout, user, loading}}>
             {children}
         </AuthContext.Provider>
     )

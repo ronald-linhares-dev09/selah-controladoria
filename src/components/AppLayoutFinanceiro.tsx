@@ -41,7 +41,7 @@ export const AppLayoutFinanceiro = () => {
          </header>
 
 
-        <main className="flex-1 overflow-y-auto bg-slate-50 relative">
+        <main className="flex-1 overflow-y-auto bg-white relative">
             <img src={logo} className="w-32 h-32 absolute right-20" />
             <Outlet />
         </main>

@@ -13,14 +13,14 @@ const pilares = [
 
 export const StepperPilares = () => {
 
-    const  { empresa } = useParams()
+    const  { empresa, cliente_id } = useParams()
     
     return (
-        <nav className="flex mt-4 w-full max-w-fit gap-6 px-4 py-2">
+        <nav className="flex mt-4 w-full max-w-fit gap-6 px-4 py-2 ">
          {pilares.map((pilar) => (
             <NavLink 
              className="flex flex-col items-center w-full max-w-fit" 
-             to={`/clientes/form/${empresa}/${pilar.rota}`} >
+             to={`/clientes/form/${cliente_id}/${empresa}/${pilar.rota}`} >
              {({ isActive }) => (
               <>
               <div className={` hover:bg-emerald-500 hover:text-white py-1 px-1 rounded-lg flex justify-center

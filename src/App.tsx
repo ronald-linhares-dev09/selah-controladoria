@@ -51,13 +51,13 @@ const AppRoutes = () => (
       <ProtectedRoute>
         <PilaresQuestionario />
       </ProtectedRoute>}>
-      <Route path="/clientes/form/:empresa/gestao" element={<Gestao />} />
-      <Route path="/clientes/form/:empresa/financeiro" element={<Financeiro />} />
-      <Route path="/clientes/form/:empresa/comercial" element={<Comercial />} />
-      <Route path="/clientes/form/:empresa/operacoes" element={<Operacoes />} />
-      <Route path="/clientes/form/:empresa/pessoas" element={<People />} />
-      <Route path="/clientes/form/:empresa/clientesexperiencia" element={<Experiencia />} />
-      <Route path="/clientes/form/:empresa/tecnologia" element={<Tech />} />      
+      <Route path="/clientes/form/:cliente_id/:empresa/gestao" element={<Gestao />} />
+      <Route path="/clientes/form/:cliente_id/:empresa/financeiro" element={<Financeiro />} />
+      <Route path="/clientes/form/:cliente_id/:empresa/comercial" element={<Comercial />} />
+      <Route path="/clientes/form/:cliente_id/:empresa/operacoes" element={<Operacoes />} />
+      <Route path="/clientes/form/:cliente_id/:empresa/pessoas" element={<People />} />
+      <Route path="/clientes/form/:cliente_id/:empresa/clientesexperiencia" element={<Experiencia />} />
+      <Route path="/clientes/form/:cliente_id/:empresa/tecnologia" element={<Tech />} />      
     </Route>
 
     <Route element={
@@ -65,8 +65,8 @@ const AppRoutes = () => (
        <AppDiagnostico />
       </ProtectedRoute>
     }>
-      <Route path="/clientes/:id/:empresa/diagnostico/geral" element={<Diagnostico />} />
-      <Route path="/clientes/:id/:empresa/diagnostico/individual" element={<DiagnosticoIndividual />} />
+      <Route path="/clientes/:cliente_id/:empresa/diagnostico/geral" element={<Diagnostico />} />
+      <Route path="/clientes/:cliente_id/:empresa/diagnostico/individual" element={<DiagnosticoIndividual />} />
     </Route>
 
     <Route element={

@@ -3,7 +3,9 @@ import { SaveAll, MoveLeft, MoveRight } from "lucide-react"
 import { toast } from "sonner"
 import { useNavigate, useParams } from "react-router-dom"
 import { CalcularNota } from "../../utils/notaPilares"
-import { API_URL } from "../../config/api"
+import { atualizar_status_cliente } from "../../services/clientes"
+import { criar_questionario } from "../../services/questionarios"
+import type { Questionario } from "../../schemas/questionarios"
 
 interface Respostas {
     code : CodigoGestao
@@ -180,8 +182,6 @@ const codigos = Object.keys(validacao_perguntas) as CodigoGestao[]
 
 const Tech = () => {
     const navigate = useNavigate()
-    
-    const token = localStorage.getItem("auth_token")
     const { empresa } = useParams()
 
     const [respostas, setRespostas] = useState<Respostas[]>(() => {
@@ -243,7 +243,6 @@ const Tech = () => {
             return;
         }
 
-        console.log('Questionário',localStorage.getItem(`Questionário Selah${empresa}`))
     
         const nota = perguntas[0].perguntas.reduce((acc, bloco) => {
             const resposta_Bloco = respostas.find((p) => p.code === bloco.codigo)
@@ -267,43 +266,19 @@ const Tech = () => {
 
         localStorage.setItem(`Questionario${empresa}`, JSON.stringify(dadosAtuais))
         const cliente_id = localStorage.getItem(`Cliente_id${empresa}`)
-        console.log('Cliente_id', cliente_id)
 
         try {
-            const fetch_notas = await fetch(`${API_URL}/questionario`, {
-                method:"POST",
-                headers:{ 
-                    "Authorization" : `Bearer ${token}`,
-                    "Content-Type" : "application/json"
-                },
-                body: JSON.stringify({ cliente_id : cliente_id ,empresa : empresa, notas : dadosAtuais.respostas})
-            })
+            await criar_questionario({ cliente_id : cliente_id ,empresa : empresa, notas : dadosAtuais.respostas} as Questionario)
 
-            if (!fetch_notas.ok) {
-                const data = await fetch_notas.json()
-                throw new Error(data?.detail || "Erro ao enviar notas")
-            } else {
-                toast.success("Dados Salvos e Enviados com sucesso")
-                localStorage.removeItem(`Cliente_id${empresa}`)
-                try {
-                    const update_status = await fetch(`${API_URL}/status_cliente/${empresa}`, {
-                        method:"PATCH",
-                        headers: {
-                            "Authorization" : `Bearer ${token}`,
-                            "Content-Type" : "application/json"
-                        },
-                        body: JSON.stringify({ status : "diagnostico"})
-                    })
-
-                    if (!update_status.ok) {
-                        const data = await update_status.json();
-                        throw new Error(data?.detail || "Erro ao atualizar status do cliente")
-                    } 
-                } catch (erro) {
+            toast.success("Dados Salvos e Enviados com sucesso")
+            localStorage.removeItem(`Cliente_id${empresa}`)
+            try {
+                await atualizar_status_cliente(cliente_id ?? "", 'diagnostico')
+                
+            } catch (erro) {
                     toast.error(erro instanceof Error ? erro.message : "Erro ao atualizar status do cliente")
-                }
-                navigate(`/clientes/view`)
             }
+            navigate(`/clientes/view`)
         } catch (erro) {
             toast.error(erro instanceof Error ? erro.message : "Erro interno ao enviar dados ao banco")
         }

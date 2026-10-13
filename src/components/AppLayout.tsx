@@ -11,7 +11,6 @@ export const AppLayout = () => {
     const { logout } = useAuth()
     const [collapsed, setCollapsed] = useState(false)
     const handleToggle = () => setCollapsed(prev => !prev)
-
      
     return (
      <div className="flex h-screen bg-gray-950 ">
@@ -42,10 +41,11 @@ export const AppLayout = () => {
          </header>
 
 
-         <main className="flex-1 overflow-y-auto bg-slate-50 relative">
+         <main className="flex-1 flex flex-col overflow-y-auto bg-white relative">
             <img src={logo} className="w-32 h-32 absolute right-20" />
-            <Outlet />
+            <Outlet  />
          </main>
+
         </div>
      </div>
     )

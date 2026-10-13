@@ -1,8 +1,8 @@
 import { useState } from "react"
 import { useAuth } from "../contexts/AuthContext"
-import { useNavigate } from "react-router-dom"
 import logo from "../assets/Videira (7).png"
 import { LogIn } from "lucide-react"
+import { toast } from "sonner"
 
 
 const Login = () => {
@@ -10,8 +10,7 @@ const Login = () => {
  const [senha, setSenha] = useState("")
  const [loading, setLoading] = useState(false)
  const { login } = useAuth()
- const navigate = useNavigate()
-
+ 
  const handleSubmit = async (e : React.FormEvent<HTMLFormElement>) => {
 
     e.preventDefault()
@@ -19,16 +18,11 @@ const Login = () => {
 
     setLoading(true)
     try {
-
         await login(email, senha)
-        console.log("Login realizado com Sucesso!")
-        navigate("/menu")
-        console.log("Navigate 2 Chamado")
-
     } catch(erro) {
-        console.log("Credenciais Inválidas")
+        toast.error("Credenciais Inválidas")
     } finally {
-        setLoading(false)
+     setLoading(false)
     }
    
  }

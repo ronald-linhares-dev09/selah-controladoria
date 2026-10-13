@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
-import { API_URL } from "../../config/api";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Edit, Delete, Search, X} from "lucide-react";
 import { formatarCNPJ, formatarCPF, formatarTelefone } from "../../utils/mascaras";
-import {useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { formatarCEP } from "../../utils/mascaras";
+import {deletar_cliente, update_cliente, atualizar_status_cliente, lista_clientes } from "../../services/clientes";
+import type { ClienteUpdate } from "../../schemas/clientes";
 
 interface Cliente {
     id : string
@@ -44,13 +46,16 @@ const Clientes = () => {
 
     const [dataClient, setDataClient] = useState<Cliente[]>([])
     const [filtroStatus, setFiltroStatus] = useState<string>("todos")
-    const token = localStorage.getItem("auth_token")
     const [busca, setBusca] = useState("")
     const [modal, setModal] = useState(false)
     const [clienteEdit, setClienteEdit] = useState<Cliente | null>(null)
+    const [buscaCEP, setBuscaCEP] = useState(false)
+    const [sucess, setSucess] = useState<"ok" | "fail" | null>(null)
+    const focus = useRef<HTMLInputElement>(null)
+
     const handleQuestionario = (cliente_id : string, status : string, empresa : string) => {
         if (status === "contratado" || status === "diagnostico") {
-            navigate(`/clientes/form/${encodeURIComponent(empresa)}/gestao`)
+            navigate(`/clientes/form/${cliente_id}/${encodeURIComponent(empresa)}/gestao`)
             return
         } 
 
@@ -63,29 +68,16 @@ const Clientes = () => {
             dados.pilaresLiberados = [... new Set([...dados.pilaresLiberados, 1,2,3,4,5,6,7])]
 
             localStorage.setItem(`Questionario${empresa}`, JSON.stringify(dados))
-            navigate(`/clientes/form/${encodeURIComponent(empresa)}/gestao`)
+            navigate(`/clientes/form/${cliente_id}/${encodeURIComponent(empresa)}/gestao`)
         }
     }
 
     const handleCliente = async (cliente_id : string) => {
         try {
-            const response_update = await fetch(`${API_URL}/status_cliente/${cliente_id}`, {
-                method:"PATCH",
-                headers: {   
-                    "Authorization" : `Bearer ${token}`,
-                    "Content-Type" : "application/json"
-                },
-                body: JSON.stringify({status : "em_negociacao"})
-            })
-
-            if (!response_update.ok) {
-                const data = await response_update.json()
-                throw new Error(data?.detail || "Erro ao atualizar status do cliente")
-            } else {
-                console.log("Cliente atualizado com sucesso")
-                setDataClient(prev => prev.map((p) => p.id === cliente_id ? {...p, status : "em_negociacao"} : p))
-                toast.success("Questionário Disponível")
-            }
+            await atualizar_status_cliente(cliente_id, 'em_negociacao')
+            console.log("Cliente atualizado com sucesso")
+            setDataClient(prev => prev.map((p) => p.id === cliente_id ? {...p, status : "em_negociacao"} : p))
+            toast.success("Questionário Disponível")
         } catch (erro) {
             console.log(erro instanceof Error ? erro.message : "Erro interno ao atualizar status do cliente")
         }
@@ -96,25 +88,11 @@ const Clientes = () => {
         const fetchDataClientes = async () => {
 
          try {
-            const response = await fetch(`${API_URL}/dados_clientes`, {
-                method:"GET",
-                headers:{
-                    "Authorization": `Bearer ${token}`,
-                    "Content-Type":"application/json"
-                }
-             }
-            )
-
-            const data = await response.json()
-
-            if (!response.ok) {
-                throw new Error(data?.detail || "Erro ao buscar dados no supabase")
-            } else {
-                console.log("Dados de clientes carregados!")
-                setDataClient(data.clientes)
-            }
+            const response = await lista_clientes()
+            setDataClient(response)
+            
          } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Erro Interno no Sistema")
+            toast.error(error instanceof Error ? error.message : "Erro ao Buscar Clientes")
          } 
         }
         fetchDataClientes()}, [])
@@ -128,19 +106,10 @@ const Clientes = () => {
     const handleDelete = async(cliente_id : string) => {
 
         try {
-            const response = await fetch(`${API_URL}/clientes/${cliente_id}`, {
-                method:"DELETE",
-                headers:{"Authorization" : `Bearer ${token}`}
-            })
-
-            if (!response.ok) {
-                const data = await response.json()
-                throw new Error(data?.detail || "Erro interno ao deletar cliente")
-            }
-            else {
-                toast.success("Cliente Deletado com Sucesso")
-                setDataClient(prev => prev.filter(c => c.id !== cliente_id ))
-            }
+            await deletar_cliente(cliente_id)
+            toast.success("Cliente Deletado com Sucesso")
+            setDataClient(prev => prev.filter(c => c.id !== cliente_id ))
+            
         } catch (erro) {
             toast.error(erro instanceof Error ? erro.message : "Erro interno no Sistema")
         }
@@ -176,49 +145,80 @@ const Clientes = () => {
         }
 
         try {
-            const response = await fetch(`${API_URL}/update_cliente/${clienteEdit.id}`, {
-                method : "PUT",
-
-                headers : {
-                    "Authorization" : `Bearer ${token}`,
-                    "Content-Type" : "application/json"
-                },
-
-                body: JSON.stringify(payload)
-            })
-
-            if (!response.ok) {
-                const data = await response.json()
-                throw new Error(data?.detail || "Erro ao atualizar dados no banco")
-            }
-
-            else {
-                setDataClient(prev => prev.map(c => c.id === clienteEdit.id ? {...c, ...payload} : c))
-                toast.success("Dados atualizados com sucesso")
-                fecharModal()
-            }
+            await update_cliente(clienteEdit.id, payload as ClienteUpdate)
+            setDataClient(prev => prev.map(c => c.id === clienteEdit.id ? {...c, ...payload} : c))
+            toast.success("Dados atualizados com sucesso")
+            fecharModal()
         } catch (error) {
             console.log(error)
             toast.error(error instanceof Error ? error.message : "Erro interno do sistema")
         }
     }
 
+    const queryCEP = async(cep_formatado : string) => {
+            const response = await fetch(`https://viacep.com.br/ws/${cep_formatado}/json/`)
+    
+            if (!response.ok) {
+                throw new Error('CEP em formato inválido')
+            }
+    
+            const data_CEP = await response.json();
+    
+            if (data_CEP.erro) {
+                throw new Error('CEP não encontrado')
+            }
+    
+            setClienteEdit((prev => prev ? ({...prev, cep : data_CEP.cep, cidade : data_CEP.localidade, estado : data_CEP.estado, endereco : `${data_CEP.logradouro} -  - `,}): prev))
+    
+        }
+    
+        const handleChangeCEP = async (e : React.ChangeEvent<HTMLInputElement>) => {
+            const cep_formatado = formatarCEP(e.target.value);
+
+            setClienteEdit(( prev => prev ? ({ ...prev, cep : cep_formatado}) : prev));
+    
+            if (cep_formatado.length === 8) {
+                try {
+                    setBuscaCEP(true)
+                    await queryCEP(cep_formatado)
+    
+                    if (!focus.current) {
+                        return;
+                    }
+                    setSucess("ok")
+                    focus.current.focus()
+                } catch (erro) {
+                    setSucess("fail")
+                    toast.error(erro instanceof Error ? erro.message : "CEP não encontrado")
+                    console.error(erro)
+    
+                } finally {
+                    setBuscaCEP(false)
+                }
+            }  else {
+                setClienteEdit((prev => prev ? ({...prev, cidade : "", estado : "", endereco : ""}) : prev));
+            
+                setSucess(null)
+            }
+        }
+
    
     return (
-    <div className="flex flex-col px-24 py-10 mt-2">
+    <div className="flex flex-col w-full">
 
-        <p className="font-extralight font-serif tracking-widest text-xs mb-1">Controladoria Estratégica</p>
-
-        <div className="flex items-center gap-48">
-         <h1 className="text-gray-950 font-bold font-serif text-3xl">Clientes <strong className="text-emerald-500">cadastrados</strong></h1>
-        </div>
+      <div className="px-10 pt-10 pb-7">
+        <p className="font-bold uppercase text-gray-500 font-serif tracking-widest text-[10px]">Controladoria Estratégica</p>
+        <h1 className="text-gray-950 font-bold font-serif text-3xl">Clientes <strong className="text-emerald-500">cadastrados</strong></h1>
+      </div>
         
-        <div className="relative mt-8">
-         <Search className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 w-4 h-4 text-gray-700" />
-         <input value={busca} onChange={(e) => setBusca(e.target.value)} className=" w-full pl-10 pr-4 py-3  border border-gray-400 rounded-xl bg-gray-100 text-sm hover:border-emerald-800 transition-colors focus:outline-none focus:border-emerald-600" type="text" placeholder="Busque por nome do cliente ou por nome da empresa..."></input>
-        </div>
+     <section className="bg-gray-100 px-10 py-6 flex flex-col gap-4 h-screen min-h-screen flex-1">
+
+         <div className="relative">
+           <Search className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 w-4 h-4 text-gray-700" />
+           <input value={busca} onChange={(e) => setBusca(e.target.value)} className=" w-full pl-10 pr-4 py-3  border border-gray-400 rounded-xl bg-white text-sm hover:border-emerald-800 transition-colors focus:outline-none focus:border-emerald-600" type="text" placeholder="Busque por nome do cliente ou por nome da empresa..."></input>
+         </div>
        
-       <div className="flex justify-between mt-3 items-center">
+         <div className="flex justify-between items-center">
             <div className="flex gap-2 ">
                 {[
                     { valor : "todos", label : "Todos"},
@@ -230,14 +230,14 @@ const Clientes = () => {
                     <button key={filtro.valor} onClick={() => setFiltroStatus(filtro.valor)}
                     className={`text-xs py-1.5 px-3 rounded-full border transition-colors  ${filtro.valor === filtroStatus
                         ? "bg-emerald-500 text-white border-emerald-500"
-                        : "bg-gray-100 text-gray-600 border-gray-300 hover:border-emerald-400"
+                        : "bg-white text-gray-600 border-gray-300 hover:border-emerald-400"
                     }`}>
                         {filtro.label}
                     </button>
                 ))}
             </div>
 
-            <div className="flex items-center border border-1 rounded-full border-gray-800  bg-gray-100">
+            <div className="flex items-center border border-1 rounded-full border-gray-800  bg-white">
               <span className="text-xs font-sans text-gray-900 font-semibold px-4 ">
                 {dataClient.length} {dataClient.length === 1 ? "cliente" : "clientes"}
                </span>
@@ -245,9 +245,9 @@ const Clientes = () => {
         </div>
 
 
-        <div className="grid grid-cols-2 gap-8 mt-6">  
+        <div className="grid grid-cols-2 gap-8 ">  
          {clientesFiltrados.map((dados) => (
-           <div key={dados.cpf} className="px-4 py-3 flex flex-col justify-around border rounded-lg border-gray-900 bg-gray-100 transition-all hover:translate-y-1 shadow-lg hover:shadow-gray-500">              
+           <div key={dados.cpf} className="px-4 py-3 flex flex-col justify-around border rounded-lg border-gray-900 bg-white transition-all hover:translate-y-1 shadow-lg hover:shadow-gray-500">              
             
             <div className="flex items-center justify-between">
             <div className="flex gap-3 items-center">
@@ -335,7 +335,7 @@ const Clientes = () => {
                     <p className="font-sans text-gray-500 text-xs">Ações</p>
                     <button 
                     className="hover:bg-emerald-800 text-emerald-800 border-emerald-800 hover:text-white font-sans  font-semibold text-[11px] rounded-lg flex justify-center items-center border px-5"
-                    onClick={() =>handleCliente(dados.empresa) }>
+                    onClick={() => handleCliente(dados.id) }>
                         Iniciar Consultoria</button>
                  </div>
               </div>
@@ -405,100 +405,134 @@ const Clientes = () => {
 
                 </div>
 
-                <div className="bg-gray-100 overflow-y-auto max-h-[75vh] px-12 py-6 rounded-b-xl">
+                <div className="bg-gray-100 overflow-y-auto max-h-[75vh] p-6 rounded-b-xl flex flex-col gap-6">
                 
+                    <div className="rounded-xl p-4 border flex justify-between border-gray-950 bg-white">
 
-                    <p className=" mt-4 text-xs text-gray-800 uppercase tracking-widest mb-4 pb-2 border-b border-gray-700">Informações Pessoais</p>
-
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="flex flex-col gap-1">
-                        <label className="text-xs text-gray-950 font-medium tracking-wide uppercase" htmlFor="nome">Nome Completo</label>
-                        <input className="rounded-lg text-sm bg-stone-200/30 border border-gray-950 px-3 py-2 text-gray-700 placeholder-gray-600 focus:outline-none
-                        focus:border-emerald-400" type="text" placeholder="João Mendes" id="nome" value={clienteEdit?.nome ?? ""} onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, nome: e.target.value}) : prev)}></input>
+                        <div className="flex flex-col items-start">
+                            <h3 className="text-xl font-bold tracking-wider font-sans text-gray-950">Contato</h3>
+                            <p className=" text-gray-500 font-sans text-[12px]">Responsável pela Empresa</p>
                         </div>
 
-                        <div className="flex flex-col gap-1">
-                        <label className="text-xs text-gray-950 font-medium tracking-wide uppercase" htmlFor="cpf">CPF</label>
-                        <input className="rounded-lg text-sm bg-stone-200/30 border border-gray-950 px-3 py-2 text-gray-700
-                        placeholder-gray-600 focus:outline-none focus:border-emerald-400" type="text" placeholder="000.000.000-00" id="cpf" value={clienteEdit?.cpf ?? ""} onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, cpf : formatarCPF(e.target.value)}) : prev)} ></input>
-                        </div>
+                        <div className="flex flex-col gap-4 w-full max-w-sm ">
+                            <div className="flex gap-4">
+                                <div className="flex flex-col gap-1 basis-2/3">
+                                  <label className="text-[10px] text-gray-950 font-medium tracking-wide uppercase" htmlFor="nome">Nome Completo</label>
+                                  <input className="rounded-lg text-[12px] bg-gray-100 border border-gray-950 px-3 py-2 text-gray-700 placeholder-gray-600/30 focus:outline-none
+                                focus:border-emerald-400" type="text" placeholder="João Mendes" id="nome" value={clienteEdit?.nome ?? ""} onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, nome: e.target.value}) : prev)}></input>
+                                </div>
 
-                        <div className="flex flex-col gap-1">
-                        <label className="text-xs text-gray-950 font-medium tracking-wide uppercase" htmlFor="telefone">Telefone</label>
-                        <input className="rounded-lg text-sm bg-stone-200/30 border border-gray-950 px-3 py-2 text-gray-700
-                        placeholder-gray-600 focus:outline-none focus:border-emerald-400" type="text" placeholder="(00) 00000-0000" id="telefone" value={clienteEdit?.telefone ?? ""} onChange={(e) => setClienteEdit(prev => prev ?({ ...prev, telefone : formatarTelefone(e.target.value)}) : prev)}></input>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                        <label className="text-xs text-gray-950 font-medium tracking-wide uppercase" htmlFor="telefone">Email</label>
-                        <input className="rounded-lg text-sm bg-stone-200/30 border border-gray-950 px-3 py-2 text-gray-700
-                        placeholder-gray-600 focus:outline-none focus:border-emerald-400" type="text" placeholder="nome@email.com" id="email" value={clienteEdit?.email ?? ""}  onChange={(e) => setClienteEdit(prev => prev ?({ ...prev, email : e.target.value}) : prev)}></input>
+                                <div className="flex flex-col gap-1 basis-1/3">
+                                <label className="text-[10px] text-gray-950 font-medium tracking-wide uppercase" htmlFor="cpf">CPF</label>
+                                <input className="rounded-lg text-[12px] bg-gray-100 border border-gray-950 px-3 py-2 text-gray-700
+                                placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" type="text" placeholder="000.000.000-00" id="cpf" value={clienteEdit?.cpf ?? ""} onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, cpf : formatarCPF(e.target.value)}) : prev)} ></input>
+                                </div>
+                            </div>
+                            
+                            <div className="flex gap-2">
+                                <div className="flex flex-col gap-1 basis-1/12">
+                                <label className="text-[10px] text-gray-950 font-medium tracking-wide uppercase" htmlFor="telefone">Telefone</label>
+                                <input className="rounded-lg text-[12px] bg-gray-100 border border-gray-950 px-3 py-2 text-gray-700
+                                    placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" type="text" placeholder="(00) 00000-0000" id="telefone" value={clienteEdit?.telefone ?? ""} onChange={(e) => setClienteEdit(prev => prev ?({ ...prev, telefone : formatarTelefone(e.target.value)}) : prev)}></input>
+                                </div>
+
+                                <div className="flex flex-col gap-1 basis-11/12">
+                                <label className="text-[10px] text-gray-950 font-medium tracking-wide uppercase" htmlFor="telefone">Email</label>
+                                    <input className="rounded-lg text-[12px] bg-gray-100 border border-gray-950 px-3 py-2 text-gray-700
+                                placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" type="text" placeholder="nome@email.com" id="email" value={clienteEdit?.email ?? ""}  onChange={(e) => setClienteEdit(prev => prev ?({ ...prev, email : e.target.value}) : prev)}></input>
+                                </div>
+
+                            </div>
                         </div>
                     </div>
 
+                    <div className="rounded-xl p-4 border flex justify-between border-gray-950 bg-white">
 
-                    <div className="border-t border-gray-950 mb-7" />
-                    
-                    <p className="text-xs text-gray-800 uppercase tracking-widest mb-4 pb-2 border-b border-gray-950">
-                        Dados Empresariais
-                        </p>
-
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                            <div className="flex flex-col gap-1">
-                                <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="empresa">Nome da Empresa</label>
-                                <input type="text" placeholder="Empresa Ltda" id="empresa" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                                placeholder-gray-600 focus:outline-none focus:border-emerald-400" value={clienteEdit?.empresa ?? ""} onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, empresa : e.target.value}) : prev)}></input>
-                            </div>
+                        <div className="flex flex-col items-start">
+                            <h3 className="text-xl font-bold tracking-wider font-sans text-gray-950">Empresa</h3>
+                            <p className=" text-gray-500 font-sans text-[12px]">Informações Empresariais</p>
+                        </div>
                         
-    
+                        <div className="flex flex-col gap-4 w-full max-w-sm">
+
+                         <div className="flex gap-4">
+                                <div className="flex flex-col gap-1 basis-2/3">
+                                    <label className="text-[10px] text-gray-950 font-medium tracking-widest uppercase" htmlFor="empresa">Nome da Empresa</label>
+                                    <input type="text" placeholder="Empresa Ltda" id="empresa" className="bg-gray-100 border border-gray-950 rounded-lg px-3 py-2 text-[12px] text-gray-950
+                                    placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" value={clienteEdit?.empresa ?? ""} onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, empresa : e.target.value}) : prev)}></input>
+                                </div>
+                            
+            
+                                <div className="flex flex-col gap-1 basis-1/3">
+                                    <label className="text-[10px] text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">CNPJ da Empresa</label>
+                                    <input type="text" placeholder="00.000.000/0000-00" id="cnpj" className="bg-gray-100 border border-gray-950 rounded-lg px-3 py-2 text-[12px] text-gray-950
+                                    placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" value={clienteEdit?.cnpj ?? ""} onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, cnpj : formatarCNPJ(e.target.value)}) : prev)}></input>
+                                </div>
+                         </div>
         
-                            <div className="flex flex-col gap-1">
-                                <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">CNPJ da Empresa</label>
-                                <input type="text" placeholder="00.000.000/0000-00" id="cnpj" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                                placeholder-gray-600 focus:outline-none focus:border-emerald-400" value={clienteEdit?.cnpj ?? ""} onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, cnpj : formatarCNPJ(e.target.value)}) : prev)}></input>
-                            </div>
-    
-                            <div className="flex flex-col gap-1">
-                                <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Segmento da Empresa</label>
-                                <input type="text" placeholder="Varejo" id="cnpj" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                                placeholder-gray-600 focus:outline-none focus:border-emerald-400" value={clienteEdit?.segmento ?? ""} onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, segmento : e.target.value}) : prev)}></input>
-                            </div>
-    
-                            <div className="flex flex-col gap-1">
-                                <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">CEP</label>
-                                <input type="text" placeholder="87200-242" id="cep" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                                placeholder-gray-600 focus:outline-none focus:border-emerald-400" value={clienteEdit?.cep ?? ""}   onChange={(e) => setClienteEdit( prev => prev ? ({ ...prev, cep : e.target.value}) : prev)}></input>
-                            </div>
-    
-                            <div className="flex flex-col gap-1">
-                                <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Estado</label>
-                                <input type="text" placeholder="Paraná" id="estado" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                                placeholder-gray-600 focus:outline-none focus:border-emerald-400" value={clienteEdit?.estado ?? ""}   onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, estado : e.target.value}) : prev)}></input>
-                            </div>
-    
-                            <div className="flex flex-col gap-1">
-                                <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Cidade</label>
-                                <input type="text" placeholder="Cianorte" id="cidade" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                                placeholder-gray-600 focus:outline-none focus:border-emerald-400" value={clienteEdit?.cidade ?? ""}  onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, cidade : e.target.value}) : prev)}></input>
-                            </div>
-    
-                            <div className="flex flex-col gap-1">
-                                <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Rua</label>
-                                <input type="text" placeholder="Rua Álvares " id="rua" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                                placeholder-gray-600 focus:outline-none focus:border-emerald-400" value={clienteEdit?.endereco.split(" - ")[0] ?? ""} onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, endereco : e.target.value}) : prev)}></input>
-                            </div>
-    
-                            <div className="flex flex-col gap-1">
-                                <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Número</label>
-                                <input type="text" placeholder="750" id="numero" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                                placeholder-gray-600 focus:outline-none focus:border-emerald-400" value={clienteEdit?.endereco.split(" - ")[1] ?? ""} onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, endereco : e.target.value}) : prev)}></input>
-                            </div>
-    
-                            <div className="flex flex-col gap-1">
-                                <label className="text-xs text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Complemento</label>
-                                <input type="text" placeholder="Apartamento 30" id="complemento" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-sm text-gray-950
-                                placeholder-gray-600 focus:outline-none focus:border-emerald-400" value={clienteEdit?.endereco.split(" - ")[2] ?? ""} onChange={(e) => setClienteEdit(prev => prev ?({ ...prev, endereco : e.target.value}) : prev)}></input>
+                         <div className="flex flex-col gap-1">
+                            <label className="text-[10px] text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Segmento da Empresa</label>
+                            <input type="text" placeholder="Varejo" id="cnpj" className="bg-gray-100 border border-gray-950 rounded-lg px-3 py-2 text-[12px] text-gray-950
+                            placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" value={clienteEdit?.segmento ?? ""} onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, segmento : e.target.value}) : prev)}></input>
+                         </div>
+                        </div>
+
+                    </div>
+
+                    <div className="rounded-xl p-4 border flex justify-between border-gray-950 bg-white">
+
+                        <div className="flex flex-col items-start">
+                            <h3 className="text-xl font-bold tracking-wider font-sans text-gray-950">Endereço</h3>
+                            <p className=" text-gray-500 font-sans text-[12px]">Localização da Empresa</p>
+                        </div>
+                        <div className="flex flex-col gap-4 w-full max-w-sm">
+
+                            <div className="flex flex-col gap-1 relative">
+                                <label className="text-[10px] text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">CEP</label>
+                                <input readOnly={buscaCEP} type="text" placeholder="87200-242" id="cep" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-[12px] text-gray-950
+                                placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" value={clienteEdit?.cep ?? ""}   onChange={handleChangeCEP}></input>
+                                <p className={`absolute text-xs opacity-0 transition-opacity top-1/2 right-2
+                                     ${sucess === "ok" ? "text-emerald-500 opacity-100" : sucess === "fail" ? "text-red-600 opacity-100" : ""}`}>
+                                     {sucess === "ok" ?"✓" : sucess === "fail" ? "✕" : ""}
+                                </p>
                             </div>
 
+                            <div className="flex gap-4">
+
+                                <div className="flex flex-col gap-1 basis-11/12">
+                                   <label className="text-[10px] text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Cidade</label>
+                                   <input type="text" placeholder="Cianorte" id="cidade" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-[12px] text-gray-950
+                                    placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" value={clienteEdit?.cidade ?? ""}  onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, cidade : e.target.value}) : prev)}></input>
+                                </div>
+
+                                <div className="flex flex-col gap-1 basis-1/12">
+                                    <label className="text-[10px] text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Estado</label>
+                                    <input type="text" placeholder="Paraná" id="estado" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-[12px] text-gray-950
+                                    placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" value={clienteEdit?.estado ?? ""}   onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, estado : e.target.value}) : prev)}></input>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+        
+                                <div className="flex flex-col gap-1 basis-11/12">
+                                    <label className="text-[10px] text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Rua</label>
+                                    <input type="text" placeholder="Rua Álvares " id="rua" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-[12px] text-gray-950
+                                    placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" value={clienteEdit?.endereco.split(" - ")[0] ?? ""} onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, endereco : e.target.value}) : prev)}></input>
+                                </div>
+        
+                                <div className="flex flex-col gap-1 basis-1/12">
+                                    <label className="text-[10px] text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Número</label>
+                                    <input ref={focus} type="text" placeholder="750" id="numero" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-[12px] text-gray-950
+                                    placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" value={clienteEdit?.endereco.split(" - ")[1] ?? ""} onChange={(e) => setClienteEdit(prev => prev ? ({ ...prev, endereco : e.target.value}) : prev)}></input>
+                                </div>
+                            </div>
+    
+                            <div className="flex flex-col gap-1">
+                                <label className="text-[10px] text-gray-950 font-medium tracking-widest uppercase" htmlFor="cnpj">Complemento</label>
+                                <input type="text" placeholder="Apartamento 30" id="complemento" className="bg-stone-200/30 border border-gray-950 rounded-lg px-3 py-2 text-[12px] text-gray-950
+                                placeholder-gray-600/30 focus:outline-none focus:border-emerald-400" value={clienteEdit?.endereco.split(" - ")[2] ?? ""} onChange={(e) => setClienteEdit(prev => prev ?({ ...prev, endereco : e.target.value}) : prev)}></input>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="flex gap-2 mb-3">
@@ -511,6 +545,7 @@ const Clientes = () => {
           </div>
         </div>
       )}
+     </section>
     </div>    
     )
 }

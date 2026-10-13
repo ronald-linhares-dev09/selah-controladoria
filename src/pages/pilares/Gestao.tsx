@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom"
 import { SaveAll } from "lucide-react"
 import { CalcularNota } from "../../utils/notaPilares"
 import { MoveLeft, MoveRight } from "lucide-react"
+import { atualizar_status_cliente } from "../../services/clientes"
 
 interface Respostas {
     code : CodigoGestao
@@ -150,10 +151,7 @@ const codigos = Object.keys(validacao_perguntas) as CodigoGestao[]
 
 
 const Gestao = () => {
-
-    const token = localStorage.getItem("auth_token")
-
-    const { empresa } = useParams()
+    const { empresa, cliente_id } = useParams()
 
     const [respostas, setRespostas] = useState<Respostas[]>(() => {
         const data = JSON.parse(localStorage.getItem(`Questionário principal${empresa}`) ?? "[]")
@@ -235,24 +233,10 @@ const Gestao = () => {
 
 
         try {
-                const patch = await fetch(`${API_URL}/status_cliente/${empresa}`, {
-                    method:"PATCH",
-                    headers: {
-                        "Authorization":`Bearer ${token}`,
-                        "Content-Type" : "application/json"
-                    },
-                    body : JSON.stringify({ status : "em_negociacao"})
-                })
-
-                if (!patch.ok) {
-                    const patch_data = await patch.json()
-                    throw new Error(patch_data?.detail || "Erro ao atualizar status do cliente")
-                } else {
-                    console.log("Dados inseridos com sucesso!")
-                    
-                    navigate(`/clientes/form/${empresa}/financeiro`)
-                    
-                }
+            await atualizar_status_cliente(cliente_id ?? "", 'em_negociacao')
+            console.log("Dados inseridos com sucesso!")    
+            navigate(`/clientes/form/${cliente_id}/${empresa}/financeiro`)
+                
         } catch (erro) {
                  toast.error(erro instanceof Error ? erro.message : "Erro Interno")
                  console.log(erro)

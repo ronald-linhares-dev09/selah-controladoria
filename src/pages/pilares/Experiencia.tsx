@@ -182,7 +182,7 @@ const codigos = Object.keys(validacao_perguntas) as CodigoGestao[]
 
 const Experiencia = () => {
    
-    const { empresa } = useParams()
+    const { empresa, cliente_id } = useParams()
 
     const [respostas, setRespostas] = useState<Respostas[]>(() => {
             const data = JSON.parse(localStorage.getItem(`Questionário principal${empresa}`) ?? "[]")
@@ -259,7 +259,7 @@ const Experiencia = () => {
         
         localStorage.setItem(`Questionario${empresa}`, JSON.stringify(dadosAtuais))
 
-        navigate(`/clientes/form/${empresa}/tecnologia`)
+        navigate(`/clientes/form/${cliente_id}/${empresa}/tecnologia`)
 
 
     }
