@@ -1,5 +1,4 @@
 import { useState } from "react"
-import { API_URL } from "../../config/api"
 import { toast } from "sonner"
 import { useParams } from "react-router-dom"
 import { useNavigate } from "react-router-dom"
