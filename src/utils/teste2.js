@@ -111,5 +111,3 @@ const clientes = [
     classificacao: "Premium"
   }
 ];
-
-console.log(cores_classificacao[clientes[0].classificacao])
